@@ -1,0 +1,336 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FriendZone | Savage Edition</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#0c0b13;color:#f7f3ff;font-family:Arial,sans-serif}
+header{padding:22px 6%;display:flex;justify-content:space-between;border-bottom:1px solid #292538}
+.logo{font-size:23px;font-weight:900}
+.logo span{color:#ff55aa}
+main{max-width:1100px;margin:auto;padding:28px 20px}
+.hero,.panel{background:#191624;border:1px solid #30283f;border-radius:22px;padding:25px;margin-bottom:20px}
+.hero{background:linear-gradient(120deg,#351735,#211b3d)}
+.tag{color:#c9ff70;font-size:12px;letter-spacing:2px}
+h1{font-size:clamp(32px,6vw,55px);margin:15px 0}
+p{color:#b9b2c9;line-height:1.6}
+button,input{font:inherit}
+button{cursor:pointer;border:0;border-radius:12px;padding:12px 16px;font-weight:bold}
+.primary{background:linear-gradient(100deg,#ff4fa3,#9875ff);color:white}
+.secondary,.mode{background:#242031;color:white;border:1px solid #393249}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:13px}
+.mode{text-align:left;padding:19px;min-height:135px}
+.mode:hover{border-color:#ff55aa}
+.mode strong{display:block;font-size:17px;margin-bottom:10px}
+.mode small{color:#b9b2c9;line-height:1.5}
+.row{display:flex;gap:9px;margin-bottom:15px}
+input{min-width:0;flex:1;background:#0f0e17;color:white;border:1px solid #393249;padding:12px;border-radius:11px}
+.chip{display:inline-flex;align-items:center;gap:8px;background:#292438;border-radius:20px;padding:8px 11px;margin:4px;font-size:13px}
+.chip button{padding:0;background:none;color:#ff80bc}
+#game{display:none;position:fixed;inset:0;background:#090811ed;overflow:auto;padding:20px;z-index:5}
+.modal{max-width:620px;margin:5vh auto;background:#191624;border:1px solid #49405e;border-radius:22px;padding:24px}
+.question{font-size:clamp(23px,4vw,34px);font-weight:bold;line-height:1.3;margin:25px 0}
+.answers{display:grid;gap:10px}
+.answers button{background:#292438;color:white;border:1px solid #413752;text-align:left}
+.answers button:hover{border-color:#ff55aa}
+#feedback{margin-top:18px;color:#c9ff70;line-height:1.6}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:10px}
+footer{text-align:center;padding:24px;color:#8c859c;font-size:12px}
+@media(max-width:500px){header{padding:17px}.hero,.panel{padding:18px}.row{flex-wrap:wrap}.row input{flex-basis:100%}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">✦ friend<span>zone</span></div>
+  <div style="color:#c9ff70;font-size:12px">SAVAGE EDITION 🔥</div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="tag">YOUR FRIEND GROUP, UNFILTERED</div>
+    <h1>Friendship is cute.<br><span style="color:#ff65b2">Chaos is better.</span></h1>
+    <p>Expose your friends, make questionable choices, and discover who really knows the group.</p>
+    <button class="primary" onclick="start()">⚡ Start playing</button>
+  </section>
+
+  <section class="panel">
+    <div class="bar"><h2>👥 Your crew</h2><span id="count">0 players</span></div>
+    <form class="row" onsubmit="addPlayer(event)">
+      <input id="name" placeholder="Enter friend's name..." maxlength="24">
+      <button class="primary">+ Add player</button>
+    </form>
+    <div id="players"></div>
+    <p>Add at least 3 friends. Take turns using the same device.</p>
+  </section>
+
+  <h2>Choose your chaos</h2>
+  <section class="grid">
+    <button class="mode" onclick="start('most')"><strong>👉 Most Likely To</strong><small>Vote for the friend who fits the savage question.</small></button>
+    <button class="mode" onclick="start('truth')"><strong>🔥 Truth or Dare</strong><small>Awkward truths and ridiculous challenges.</small></button>
+    <button class="mode" onclick="start('fake')"><strong>🕵️ Find the Fake Friend</strong><small>One player gets a different secret word.</small></button>
+    <button class="mode" onclick="start('friend')"><strong>💚 Friendship Test</strong><small>Guess your friends' preferences.</small></button>
+    <button class="mode" onclick="start('rather')"><strong>⚖️ Would You Rather</strong><small>Choose between two chaotic scenarios.</small></button>
+    <button class="mode" onclick="start('scores')"><strong>🏆 Leaderboard</strong><small>See who's winning the friendship.</small></button>
+  </section>
+
+  <section class="panel" style="margin-top:22px">
+    <h3>📜 House rules</h3>
+    <p>🤝 Keep the roasting friendly.</p>
+    <p>🛑 Anyone can pass on a truth or dare.</p>
+    <p>📱 Keep secret words hidden from other players.</p>
+  </section>
+</main>
+
+<footer>FRIENDZONE · SAVAGE EDITION · Made for chaotic friendships</footer>
+
+<div id="game">
+  <div class="modal">
+    <div class="bar">
+      <div><div class="tag">LET THE CHAOS BEGIN</div><h2 id="title">Game</h2></div>
+      <button class="secondary" onclick="closeGame()">✕</button>
+    </div>
+    <div id="content"></div>
+    <div id="feedback"></div>
+    <div class="bar" style="margin-top:22px">
+      <button class="secondary" onclick="closeGame()">Dashboard</button>
+      <button class="primary" id="next" onclick="nextRound()">Next round →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let players=[],scores={},mode="most",round=0,state={};
+
+const questions={
+ most:[
+ "Who would betray the group for ₹500?",
+ "Who gives terrible advice with full confidence?",
+ "Who is most likely to stalk their crush online?",
+ "Who would start drama and then deny it?",
+ "Who would become famous and forget everyone?",
+ "Who is most likely to arrive late to their own wedding?",
+ "Who would accidentally leak a group secret?",
+ "Who would laugh at the worst possible moment?"
+ ],
+ truths:[
+ "What's your most embarrassing moment?",
+ "What's a harmless lie you've told your friends?",
+ "What's your most useless talent?",
+ "What's a habit your friends would roast you for?",
+ "What's the funniest excuse you've used to cancel plans?",
+ "Have you ever pretended to understand something you didn't?"
+ ],
+ dares:[
+ "Do your best celebrity impression for 20 seconds.",
+ "Sing a song chorus dramatically.",
+ "Give a breaking-news report about this room.",
+ "Do a robot dance for 15 seconds.",
+ "Tell a joke. The group is the jury.",
+ "Give everyone a funny, friendly compliment."
+ ],
+ words:[["Pizza","Burger"],["Moon","Sun"],["Tea","Coffee"],["Cat","Dog"],["Football","Cricket"],["Laptop","Phone"]],
+ rather:[
+ ["Be famous but have no privacy","Be unknown but extremely rich"],
+ ["Let friends read your search history","Let family read your group chats"],
+ ["Lose your phone for a month","Lose gaming for a month"],
+ ["Always arrive an hour early","Always arrive 30 minutes late"],
+ ["Have unlimited money but no free time","Have unlimited free time but little money"]
+ ],
+ friend:[
+ ["Ideal holiday?","Mountains","Beach"],
+ ["Free evening?","Gaming","Movies"],
+ ["Ideal weekend?","Going out","Staying home"],
+ ["Dream superpower?","Flying","Invisibility"],
+ ["Which matters more?","Success","Peace"]
+ ]
+};
+
+function addPlayer(e){
+ e.preventDefault();
+ const input=$("name"),name=input.value.trim();
+ if(!name)return;
+ if(players.length>=20)return alert("Maximum 20 players!");
+ if(players.some(p=>p.toLowerCase()===name.toLowerCase()))return alert("Name already added!");
+ players.push(name);scores[name]=0;input.value="";renderPlayers();
+}
+function renderPlayers(){
+ $("count").textContent=players.length+" players";
+ $("players").innerHTML="";
+ players.forEach((p,i)=>{
+  const chip=document.createElement("span");
+  chip.className="chip";
+  const label=document.createElement("span");
+  label.textContent="✦ "+p;
+  const remove=document.createElement("button");
+  remove.textContent="×";remove.onclick=()=>{
+   players.splice(i,1);delete scores[p];renderPlayers();
+  };
+  chip.append(label,remove);$("players").append(chip);
+ });
+}
+function start(selected="most"){
+ if(selected!=="scores"&&players.length<3){
+  alert("Add at least 3 friends first!");$("name").focus();return;
+ }
+ mode=selected;state={};round++;
+ $("game").style.display="block";$("feedback").textContent="";
+ $("title").textContent=({
+  most:"Most Likely To",truth:"Truth or Dare",fake:"Find the Fake Friend",
+  friend:"Friendship Test",rather:"Would You Rather",scores:"Leaderboard"
+ })[mode];
+ $("next").style.display=mode==="scores"?"none":"inline-block";
+ renderGame();
+}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function safe(text){
+ return String(text).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+function renderGame(){
+ const c=$("content");$("feedback").textContent="";
+ if(mode==="most"){
+  state.votes={};state.voter=0;state.question=pick(questions.most);
+  c.innerHTML=`<div class="question">${safe(state.question)}</div><p>Each player votes once. One point goes to the friend with the most votes.</p><div id="choices" class="answers"></div><p id="progress"></p>`;
+  showMostVote();
+ }
+ else if(mode==="truth"){
+  c.innerHTML=`<div class="question">Whose turn is it?</div><div class="answers" id="choices"></div>`;
+  players.forEach(p=>addButton($("choices"),p,()=>truthChoice(p)));
+ }
+ else if(mode==="fake"){
+  state.pair=pick(questions.words);state.fake=pick(players);state.index=0;state.phase="words";
+  c.innerHTML=`<div class="question">Find the Fake Friend 🕵️</div><p>Pass the device privately. Each player reveals only their own word, then hides it.</p><div id="secret"></div>`;
+  showSecret();
+ }
+ else if(mode==="friend"){
+  state.target=pick(players);state.q=pick(questions.friend);state.phase="answer";
+  c.innerHTML=`<div class="question">${safe(state.target)}, answer privately: ${safe(state.q[0])}</div><div class="answers" id="choices"></div><div id="guesses"></div>`;
+  addButton($("choices"),"A · "+state.q[1],()=>friendAnswer("a"));
+  addButton($("choices"),"B · "+state.q[2],()=>friendAnswer("b"));
+ }
+ else if(mode==="rather"){
+  state.q=pick(questions.rather);state.votes={};
+  c.innerHTML=`<div class="question">Would you rather…?</div><div class="answers" id="choices"></div><div id="results"></div>`;
+  addButton($("choices"),"A · "+state.q[0],()=>ratherVote("a"));
+  addButton($("choices"),"B · "+state.q[1],()=>ratherVote("b"));
+ }
+ else if(mode==="scores"){
+  const sorted=Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  c.innerHTML='<div class="question">🏆 Current standings</div>'+
+  (sorted.map((x,i)=>`<p>${["🥇","🥈","🥉"][i]||"✦"} ${safe(x[0])} — ${x[1]} points</p>`).join("")||"<p>No scores yet.</p>");
+ }
+}
+function addButton(parent,label,fn){
+ const b=document.createElement("button");b.textContent=label;b.onclick=fn;parent.append(b);
+}
+function showMostVote(){
+ const c=$("choices");c.innerHTML="";
+ if(state.voter>=players.length){
+  const max=Math.max(...players.map(p=>state.votes[p]||0));
+  const winners=players.filter(p=>(state.votes[p]||0)===max);
+  winners.forEach(p=>scores[p]++);
+  $("progress").textContent="Votes are in!";
+  $("feedback").textContent="🏆 Most votes: "+winners.join(", ")+". +1 point each!";
+  $("next").textContent="Next question →";return;
+ }
+ $("progress").textContent=players[state.voter]+"'s vote ("+(state.voter+1)+"/"+players.length+")";
+ players.forEach(p=>addButton(c,p,()=>{
+  state.votes[p]=(state.votes[p]||0)+1;state.voter++;showMostVote();
+ }));
+}
+function truthChoice(p){
+ $("content").innerHTML=`<div class="question">${safe(p)}, truth or dare?</div><div class="answers" id="choices"></div><p>Passing is always allowed.</p>`;
+ addButton($("choices"),"💬 Truth",()=>challenge(p,"truth"));
+ addButton($("choices"),"🔥 Dare",()=>challenge(p,"dare"));
+ $("next").textContent="Next turn →";
+}
+function challenge(p,type){
+ const q=pick(questions[type==="truth"?"truths":"dares"]);
+ $("content").innerHTML=`<div class="tag">${safe(p.toUpperCase())}'S TURN</div><div class="question">${safe(q)}</div><p>You may pass or pick another challenge.</p><button class="secondary" onclick="challenge('${safe(p)}','${type}')">Pick another</button>`;
+ $("feedback").textContent="Keep it fun. No pressure.";
+}
+function showSecret(){
+ const c=$("secret");
+ if(state.index>=players.length){
+  c.innerHTML='<div class="question">All words revealed!</div><p>Give clues, discuss, then vote.</p><button class="primary" onclick="fakeVote()">Start voting</button>';
+  $("next").style.display="none";return;
+ }
+ const p=players[state.index];
+ c.innerHTML=`<p>Player ${state.index+1} of ${players.length}: <strong>${safe(p)}</strong></p><button class="primary" id="reveal">Reveal my word</button><div id="word"></div>`;
+ $("reveal").onclick=()=>{
+  const word=p===state.fake?state.pair[1]:state.pair[0];
+  $("word").innerHTML=`<div class="question">${safe(word)}</div><button class="secondary" id="hide">Hide word & pass</button>`;
+  $("reveal").style.display="none";
+  $("hide").onclick=()=>{state.index++;showSecret()};
+ };
+}
+function fakeVote(){
+ state.votes={};state.voter=0;
+ $("content").innerHTML='<div class="question">Who is the fake friend?</div><p id="progress"></p><div class="answers" id="choices"></div>';
+ showFakeVote();
+}
+function showFakeVote(){
+ const c=$("choices");c.innerHTML="";
+ if(state.voter>=players.length){
+  const max=Math.max(...players.map(p=>state.votes[p]||0));
+  const winners=players.filter(p=>(state.votes[p]||0)===max);
+  if(winners.includes(state.fake)){
+   players.forEach(p=>{if(state.ballots[p]===state.fake)scores[p]+=2});
+   $("feedback").textContent="🎉 The group caught "+state.fake+"! Correct voters earn 2 points.";
+  }else{
+   scores[state.fake]+=2;
+   $("feedback").textContent="😂 "+state.fake+" fooled the group! The fake earns 2 points.";
+  }
+  $("next").style.display="inline-block";$("next").textContent="Play again →";return;
+ }
+ $("progress").textContent=players[state.voter]+"'s vote";
+ players.forEach(p=>addButton(c,p,()=>{
+  state.votes[p]=(state.votes[p]||0)+1;
+  state.ballots=state.ballots||{};state.ballots[players[state.voter]]=p;
+  state.voter++;showFakeVote();
+ }));
+}
+function friendAnswer(answer){
+ state.answer=answer;state.guesses={};state.voter=0;
+ $("content").innerHTML=`<div class="question">Friends, guess ${safe(state.target)}'s answer!</div><p>${safe(state.q[0])}</p><div class="answers" id="choices"></div><p id="progress"></p>`;
+ showFriendGuess();
+}
+function showFriendGuess(){
+ const c=$("choices");c.innerHTML="";
+ const guessers=players.filter(p=>p!==state.target);
+ if(state.voter>=guessers.length){
+  let correct=0;
+  guessers.forEach(p=>{if(state.guesses[p]===state.answer){scores[p]++;correct++}});
+  $("feedback").textContent=`Answer: ${state.answer==="a"?state.q[1]:state.q[2]}. ${correct} friend(s) guessed correctly!`;
+  $("next").textContent="Next round →";return;
+ }
+ const p=guessers[state.voter];
+ $("progress").textContent=p+"'s guess";
+ addButton(c,"A · "+state.q[1],()=>recordFriendGuess(p,"a"));
+ addButton(c,"B · "+state.q[2],()=>recordFriendGuess(p,"b"));
+}
+function recordFriendGuess(p,g){
+ state.guesses[p]=g;state.voter++;showFriendGuess();
+}
+function ratherVote(answer){
+ const voter=players.find(p=>!state.votes[p]);
+ if(!voter){$("feedback").textContent="All votes are in!";return}
+ state.votes[voter]=answer;
+ const total=Object.keys(state.votes).length;
+ if(total===players.length){
+  const a=Object.values(state.votes).filter(v=>v==="a").length;
+  const b=players.length-a;
+  $("feedback").textContent=`Final votes — A: ${a}, B: ${b}. ${a===b?"It's a tie!":a>b?"Option A wins!":"Option B wins!"}`;
+ }else $("feedback").textContent=`Vote recorded for ${voter}. Pass the device to the next player (${total}/${players.length}).`;
+}
+function nextRound(){
+ if(mode==="scores"){closeGame();return}
+ renderGame();$("next").textContent="Next round →";$("next").style.display="inline-block";
+}
+function closeGame(){$("game").style.display="none"}
+</script>
+</body>
+</html>
